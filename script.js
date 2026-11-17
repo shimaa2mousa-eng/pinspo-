@@ -33,6 +33,31 @@ let drag = null;                // what is being dragged right now
 const alphaCanvases = new Map(); // remembers which parts of each shelf picture are solid
 
 
+/* Built-in styles for the save preview and the little message, so they look right
+   even if style.css doesn't have them. (Yours in style.css still win if present.) */
+const baseStyle = document.createElement('style');
+baseStyle.textContent = `
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#3a2c20;color:#fff;
+    padding:10px 20px;border-radius:999px;font:600 16px Caveat,sans-serif;z-index:100000;opacity:0;
+    transition:opacity .3s;pointer-events:none;white-space:nowrap}
+  #saveBox{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,90vw);
+    max-height:90vh;box-sizing:border-box;background:#f6efe3;border-radius:14px;padding:16px;
+    box-shadow:0 12px 40px rgba(0,0,0,.35);z-index:99999;display:flex;flex-direction:column;gap:12px}
+  #saveBox img{display:block;width:100%;height:auto;max-height:62vh;object-fit:contain;border-radius:8px}
+  #saveBox div{display:flex;gap:10px;justify-content:center}
+  #saveBox a,#saveBox button{font:600 16px Caveat,sans-serif;padding:8px 22px;border-radius:999px;border:0;
+    background:#c79a6b;color:#fff;cursor:pointer;text-decoration:none}
+  #saveBox button{background:#e8dccb;color:#3a2c20}
+  html:not(.ready) #stage{opacity:0}
+  #stage{transition:opacity .35s}
+`;
+document.head.prepend(baseStyle);
+// show the page only after everything has loaded (prevents the scattered flash on refresh)
+const showPage = () => document.documentElement.classList.add('ready');
+window.addEventListener('load', showPage);
+setTimeout(showPage, 3000);
+
+
 /* =====================================================================
    2. SOUNDS  (made in code, no sound files needed)
    To change how loud everything is, change MASTER_VOLUME.
