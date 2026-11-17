@@ -16,6 +16,7 @@
    12. Shelf buttons (actions) ...... what each shelf item does
    13. Hover and click on the shelf . only the visible parts react
    14. Intro screen
+   15. Automatic saving ............ the board is remembered in this browser
    ===================================================================== */
 
 
@@ -368,8 +369,23 @@ fileInput.type = 'file';
 fileInput.accept = 'image/*';
 fileInput.onchange = e => {
   const f = e.target.files[0];
-  if (f) addImage(URL.createObjectURL(f), 25);
   fileInput.value = '';
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  const im = new Image();
+  im.onload = () => {   // shrink big photos so the board can be saved automatically
+    const keepAlpha = /png|gif|webp/.test(f.type);
+    const max = keepAlpha ? 800 : 1000;
+    const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(im.naturalWidth * k);
+    c.height = Math.round(im.naturalHeight * k);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    addImage(c.toDataURL(keepAlpha ? 'image/png' : 'image/jpeg', 0.85), 25);
+  };
+  im.onerror = () => { addImage(url, 25); };
+  im.src = url;
 };
 
 
@@ -700,3 +716,82 @@ if (intro) {
   intro.addEventListener('click', () => intro.remove());
   setTimeout(() => intro.remove(), 5400);
 }
+
+
+/* =====================================================================
+   15. AUTOMATIC SAVING
+   The board is remembered in this browser (localStorage), on this device.
+   It saves a moment after every change and comes back when the page loads.
+   ===================================================================== */
+const BOARD_KEY = 'pinspoBoard';
+const BASE_URL = new URL('.', location.href).href;
+let saveWarned = false;
+
+function itemData(it) {
+  const o = {
+    left: it.style.left, top: it.style.top, width: it.style.width, rotate: it.style.rotate || '',
+    flippable: it.classList.contains('flippable'), flipped: it.classList.contains('flipped')
+  };
+  if (it.dataset.text) {
+    const t = it.querySelector('.text');
+    o.text = t.textContent;
+    o.font = t.style.fontFamily;
+    o.color = t.style.color;
+  } else {
+    const img = it.querySelector('img');
+    const full = img ? img.src : '';
+    o.img = full.startsWith(BASE_URL) ? full.slice(BASE_URL.length) : full;   // keep paths short
+  }
+  return o;
+}
+
+function saveBoard() {
+  try {
+    const data = [...board.querySelectorAll('.item')].map(itemData);
+    localStorage.setItem(BOARD_KEY, JSON.stringify(data));
+  } catch (err) {
+    if (!saveWarned) {
+      saveWarned = true;
+      toast('The board is too full to save automatically. Try removing a big photo.', 5000);
+    }
+  }
+}
+
+function restoreBoard() {
+  let data;
+  try { data = JSON.parse(localStorage.getItem(BOARD_KEY) || '[]'); } catch (err) { return; }
+  if (!Array.isArray(data)) return;
+  data.forEach(o => {
+    if (!o || typeof o !== 'object') return;
+    const it = document.createElement('div');
+    it.className = 'item' + (o.flippable ? ' flippable' : '') + (o.flipped ? ' flipped' : '');
+    it.style.left = o.left; it.style.top = o.top; it.style.width = o.width;
+    if (o.rotate) it.style.rotate = o.rotate;
+    if (typeof o.text === 'string') {
+      const t = document.createElement('div');
+      t.className = 'text';
+      t.textContent = o.text;
+      t.style.fontFamily = o.font || currentFont;
+      t.style.color = o.color || currentColor;
+      it.appendChild(t);
+      it.dataset.text = '1';
+    } else if (typeof o.img === 'string') {
+      const img = document.createElement('img');
+      img.src = o.img;
+      img.draggable = false;
+      it.appendChild(img);
+    } else return;
+    it.insertAdjacentHTML('beforeend', '<span class="handle"></span><span class="del">×</span><span class="rot"></span>');
+    board.appendChild(it);
+    if (it.dataset.text) sizeText(it);
+  });
+}
+
+restoreBoard();
+
+let saveTimer = null;
+const saveSoon = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveBoard, 400); };
+new MutationObserver(saveSoon).observe(board, {
+  childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['style', 'class']
+});
+window.addEventListener('pagehide', () => { clearTimeout(saveTimer); saveBoard(); });
