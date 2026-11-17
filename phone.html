@@ -6,7 +6,7 @@
   <title>Pinspo</title>
   <meta name="description" content="A cozy drag-and-drop mood board.">
   <!-- Wide screens get the desktop version -->
-  <script>if (matchMedia('(min-width: 701px)').matches) location.replace('index.html' + location.hash);</script>
+  <script>if (!(matchMedia('(max-width: 700px)').matches || screen.width <= 700)) location.replace('index.html' + location.hash);</script>
   <link rel="icon" type="image/png" href="images/favicon.png">
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <link rel="stylesheet" href="phone.css">
