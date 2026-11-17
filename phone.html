@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pinspo</title>
+  <meta name="description" content="A cozy drag-and-drop mood board.">
+  <!-- Wide screens get the desktop version -->
+  <script>if (matchMedia('(min-width: 701px)').matches) location.replace('index.html' + location.hash);</script>
+  <link rel="icon" type="image/png" href="images/favicon.png">
+  <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+  <link rel="stylesheet" href="phone.css">
+  <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Caveat:wght@600&family=Dancing+Script:wght@600&family=Patrick+Hand&family=Permanent+Marker&family=Playfair+Display:wght@600&family=Special+Elite&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+  <div id="intro"><img src="images/logo.png" alt="Pinspo"></div>
+  <div id="stage">
+
+    <!-- 1. Logo -->
+    <div id="logo" role="img" aria-label="Pinspo"></div>
+
+    <!-- 2. Cork board (in its wooden frame) -->
+    <div id="frame"><div id="board"></div></div>
+
+    <!-- 3. Shelf: one row of tiles that scrolls sideways. Tap a tile to use it. -->
+    <p id="shelfLabel">Shelf · swipe for more →</p>
+    <div id="shelfRow">
+      <button class="tile" type="button" aria-label="Write text"><img class="shelf" id="penciljar" draggable="false" src="images/jar/jar-01.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Add paper"><img class="shelf" id="books" draggable="false" src="images/books.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Add sticky note"><img class="shelf" id="stickynote" draggable="false" src="images/note/note-01.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Add pin"><img class="shelf" id="pin" draggable="false" src="images/pin.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Add butterfly"><img class="shelf" id="butterfly" draggable="false" src="images/butterfly.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Add flower"><img class="shelf" id="flower" draggable="false" src="images/flower.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Add polaroid"><img class="shelf" id="poloroid" draggable="false" src="images/poloroid.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Add date"><img class="shelf" id="shelfcalendar" draggable="false" src="images/peek/peek-01.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Upload a picture"><img class="shelf" id="upload" draggable="false" src="images/upload.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Save as picture"><img class="shelf" id="saveto" draggable="false" src="images/saveto.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Edit board"><img class="shelf" id="candel" draggable="false" src="images/candel.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Plant"><img class="shelf" id="plant" draggable="false" src="images/plant/plant-01.png" alt=""></button>
+      <button class="tile" type="button" aria-label="Vase"><img class="shelf" id="vase" draggable="false" src="images/vase.png" alt=""></button>
+    </div>
+
+    <!-- Edit board (opened by the candle) -->
+    <div id="layersBox">
+      <div class="lhead"><b>Edit Board</b><button id="layersClose" type="button">×</button></div>
+      <p class="lsub">Board Layers</p>
+      <div id="layerList"></div>
+      <button id="clearBoard" type="button">Clear entire board</button>
+    </div>
+
+    <!-- Text panel (opened by the pencil jar) -->
+    <div id="panel">
+      <div class="ticket">
+        <div class="tmain">
+          <label>Font</label>
+          <select id="fontSelect">
+            <option style="font-family:Caveat">Caveat</option>
+            <option style="font-family:'Patrick Hand'">Patrick Hand</option>
+            <option style="font-family:'Amatic SC'">Amatic SC</option>
+            <option style="font-family:'Special Elite'">Special Elite</option>
+            <option style="font-family:'Playfair Display'">Playfair Display</option>
+            <option style="font-family:'Dancing Script'">Dancing Script</option>
+            <option style="font-family:'Permanent Marker'">Permanent Marker</option>
+          </select>
+          <label>Text</label>
+          <textarea id="panelText" placeholder="Type your text..."></textarea>
+        </div>
+        <div class="tstub">
+          <label>Color</label>
+          <div id="swatches"></div>
+          <div class="tbtns">
+            <button id="addText" type="button">Add to board</button>
+            <button id="panelClose" type="button" aria-label="Close">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="phone.js"></script>
+</body>
+</html>
