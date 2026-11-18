@@ -14,7 +14,7 @@
     8. Save as PNG .................. download your board
     9. Edit board (candle) .......... layers list + clear board
    10. Calendar ..................... adds a date
-   11. Shelf animations ............. sticky note, polaroid, jar, plant, calendar
+   11. Shelf animations ............. sticky note, polaroid, jar, calendar
    12. Shelf buttons (actions) ...... what each shelf tile does
    13. Tapping the shelf ............ plays the animation, then the action
    14. Intro screen
@@ -452,7 +452,7 @@ function openDatePicker() {
 /* =====================================================================
    11. SHELF ANIMATIONS
    Each one swaps the picture's frames. Folders:
-   images/note, images/jar, images/plant, images/peek
+   images/note, images/jar, images/peek
    On phones the "hover" class is added for a moment when a tile is tapped.
    ===================================================================== */
 
@@ -502,20 +502,6 @@ new MutationObserver(() => {
   if (jarEl.classList.contains('hover') && !jarTimer) jarTimer = setInterval(jarTick, 100);
 }).observe(jarEl, { attributes: true, attributeFilter: ['class'] });
 
-/* ---- Plant: sways ---- */
-const plantEl = document.getElementById('plant');
-const plantFrames = Array.from({ length: 40 }, (_, i) => 'images/plant/plant-' + String(i + 1).padStart(2, '0') + '.png');
-plantFrames.forEach(f => { new Image().src = f; });
-let plantIdx = 0, plantTimer = null;
-function plantTick() {
-  plantIdx = (plantIdx + 1) % plantFrames.length;
-  plantEl.src = plantFrames[plantIdx];
-  if (plantIdx === 0 && !plantEl.classList.contains('hover')) { clearInterval(plantTimer); plantTimer = null; }
-}
-new MutationObserver(() => {
-  if (plantEl.classList.contains('hover') && !plantTimer) plantTimer = setInterval(plantTick, 80);
-}).observe(plantEl, { attributes: true, attributeFilter: ['class'] });
-
 /* ---- Calendar: the page corner lifts, then lowers ---- */
 const calEl = document.getElementById('shelfcalendar');
 const calFrames = [1, 2, 3, 4, 5].map(n => 'images/peek/peek-0' + n + '.png');
@@ -536,7 +522,7 @@ new MutationObserver(() => calGo(calEl.classList.contains('hover') ? 4 : 0))
 /* =====================================================================
    12. SHELF BUTTONS
    What happens when you tap each shelf tile. The number is the size on
-   the board (% of the board's width). The vase and plant only animate.
+   the board (% of the board's width).
    ===================================================================== */
 const src = id => document.getElementById(id).getAttribute('src');
 
@@ -564,8 +550,8 @@ const actions = {
 const TAP_ANIMATION_MS = 1200;
 const tapTimers = new Map();
 
-document.getElementById('shelfRow').addEventListener('click', e => {
-  const tile = e.target.closest('.tile');
+function shelfTap(e) {
+  const tile = e.target.closest('.tile, .tool');
   if (!tile) return;
   const img = tile.querySelector('.shelf');
   play('click');
@@ -574,7 +560,9 @@ document.getElementById('shelfRow').addEventListener('click', e => {
   clearTimeout(tapTimers.get(img));
   tapTimers.set(img, setTimeout(() => { img.classList.remove('hover'); tile.classList.remove('tapped'); }, TAP_ANIMATION_MS));
   if (actions[img.id]) actions[img.id]();
-});
+}
+document.getElementById('shelfRow').addEventListener('click', shelfTap);
+document.getElementById('toolRow').addEventListener('click', shelfTap);
 
 
 /* =====================================================================
