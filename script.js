@@ -16,7 +16,6 @@
    12. Shelf buttons (actions) ...... what each shelf item does
    13. Hover and click on the shelf . only the visible parts react
    14. Intro screen
-   15. Automatic saving ............ the board is remembered in this browser
    ===================================================================== */
 
 
@@ -30,12 +29,10 @@ let selected = null;            // the item that is currently selected
 let currentFont = 'Caveat';     // font for new text
 let currentColor = '#3a2c20';   // color for new text
 let drag = null;                // what is being dragged right now
+let restoring = false;          // true while the saved board is being put back
 
 const alphaCanvases = new Map(); // remembers which parts of each shelf picture are solid
-
-
-/* Built-in styles for the save preview and the little message, so they look right
-   even if style.css doesn't have them. (Yours in style.css still win if present.) */
+/* Built-in styles for the save preview and the message */
 const baseStyle = document.createElement('style');
 baseStyle.textContent = `
   #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#3a2c20;color:#fff;
@@ -53,7 +50,6 @@ baseStyle.textContent = `
   #stage{transition:opacity .35s}
 `;
 document.head.prepend(baseStyle);
-// show the page only after everything has loaded (prevents the scattered flash on refresh)
 const showPage = () => document.documentElement.classList.add('ready');
 window.addEventListener('load', showPage);
 setTimeout(showPage, 3000);
@@ -185,8 +181,7 @@ function addItem(content, widthPct, isText) {
     '<span class="handle"></span><span class="del">×</span><span class="rot"></span>');
   if (isText) { item.dataset.text = '1'; sizeText(item); }
   board.appendChild(item);
-  play('add');
-  select(item);
+  if (!restoring) { play('add'); select(item); }
   return item;
 }
 
@@ -201,13 +196,13 @@ function addImage(src, widthPct) {
   return addItem(img, widthPct, false);
 }
 
-function addText(words) {
+function addText(words, font = currentFont, color = currentColor) {
   const t = document.createElement('div');
   t.className = 'text';
   t.textContent = words;
-  t.style.fontFamily = currentFont;
-  t.style.color = currentColor;
-  addItem(t, 30, true);
+  t.style.fontFamily = font;
+  t.style.color = color;
+  return addItem(t, 30, true);
 }
 
 
@@ -363,36 +358,47 @@ document.getElementById('addText').onclick = () => {
 
 /* =====================================================================
    7. UPLOAD  (add your own pictures)
+   Pictures are made smaller first so they fit in the autosave.
    ===================================================================== */
 const fileInput = document.createElement('input');
 fileInput.type = 'file';
 fileInput.accept = 'image/*';
-fileInput.onchange = e => {
+fileInput.onchange = async e => {
   const f = e.target.files[0];
   fileInput.value = '';
   if (!f) return;
-  const url = URL.createObjectURL(f);
-  const im = new Image();
-  im.onload = () => {   // shrink big photos so the board can be saved automatically
-    const keepAlpha = /png|gif|webp/.test(f.type);
-    const max = keepAlpha ? 800 : 1000;
-    const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
-    const c = document.createElement('canvas');
-    c.width = Math.round(im.naturalWidth * k);
-    c.height = Math.round(im.naturalHeight * k);
-    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-    URL.revokeObjectURL(url);
-    addImage(c.toDataURL(keepAlpha ? 'image/png' : 'image/jpeg', 0.85), 25);
-  };
-  im.onerror = () => { addImage(url, 25); };
-  im.src = url;
+  try { addImage(await shrinkImage(f), 25); }
+  catch (err) { toast('Sorry, that picture could not be opened.', 3000); }
 };
+
+function shrinkImage(file) {
+  const keepClear = /png|gif|webp/.test(file.type);   // keep see-through parts
+  const max = keepClear ? 900 : 1200;                  // longest side, in pixels
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * k);
+      c.height = Math.round(img.naturalHeight * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL(keepClear ? 'image/png' : 'image/jpeg', 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad image')); };
+    img.src = url;
+  });
+}
 
 
 /* =====================================================================
    8. SAVE AS PNG
    Needs the small message styles (#toast and #saveBox) in style.css.
    ===================================================================== */
+// Where the cork sits inside background.png (the same numbers as #board in style.css)
+const CORK = { x: 0.04, y: 0.114, w: 0.677, h: 0.772 };
+
 function toast(msg, ms) {   // the little message at the bottom of the page
   let t = document.getElementById('toast');
   if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
@@ -431,12 +437,13 @@ async function savePNG() {
   try {
     const bgImg = await loadImg('images/background.png');
     const shot = await html2canvas(board, { backgroundColor: null, scale: 2, logging: false });
-    const s = stage.getBoundingClientRect(), b = board.getBoundingClientRect();
-    const k = bgImg.naturalWidth / s.width;
     const out = document.createElement('canvas');
     out.width = shot.width; out.height = shot.height;
     const g = out.getContext('2d');
-    g.drawImage(bgImg, (b.left - s.left) * k, (b.top - s.top) * k, b.width * k, b.height * k, 0, 0, out.width, out.height);
+    // background.png is stretched to fit #stage, so the cork is cut out by the
+    // same percentages as #board in style.css (not by on-screen pixels)
+    const W = bgImg.naturalWidth, H = bgImg.naturalHeight;
+    g.drawImage(bgImg, CORK.x * W, CORK.y * H, CORK.w * W, CORK.h * H, 0, 0, out.width, out.height);
     g.drawImage(shot, 0, 0);
     out.toBlob(blob => { play('save'); toast('Saved!', 1500); showSaved(URL.createObjectURL(blob)); }, 'image/png');
   } catch (err) {
@@ -645,7 +652,7 @@ if (calEl) {
    on the board (% of the board's width). The vase and plant have no
    click action, so they only react to hover.
    ===================================================================== */
-const src = id => document.getElementById(id).src;
+const src = id => document.getElementById(id).getAttribute('src');
 
 const actions = {
   penciljar:     () => { panel.style.display = panel.style.display === 'block' ? 'none' : 'block'; },
@@ -719,79 +726,66 @@ if (intro) {
 
 
 /* =====================================================================
-   15. AUTOMATIC SAVING
-   The board is remembered in this browser (localStorage), on this device.
-   It saves a moment after every change and comes back when the page loads.
+   15. AUTOSAVE
+   The board is saved in this browser after every change and put back
+   when the page opens. The phone version (phone.js) shares the same
+   saved board.
    ===================================================================== */
-const BOARD_KEY = 'pinspoBoard';
-const BASE_URL = new URL('.', location.href).href;
-let saveWarned = false;
+const SAVE_KEY = 'pinspoBoard';
+let saveTimer = null, saveWarned = false;
 
-function itemData(it) {
-  const o = {
-    left: it.style.left, top: it.style.top, width: it.style.width, rotate: it.style.rotate || '',
-    flippable: it.classList.contains('flippable'), flipped: it.classList.contains('flipped')
-  };
-  if (it.dataset.text) {
-    const t = it.querySelector('.text');
-    o.text = t.textContent;
-    o.font = t.style.fontFamily;
-    o.color = t.style.color;
-  } else {
-    const img = it.querySelector('img');
-    const full = img ? img.src : '';
-    o.img = full.startsWith(BASE_URL) ? full.slice(BASE_URL.length) : full;   // keep paths short
-  }
-  return o;
-}
-
-function saveBoard() {
-  try {
-    const data = [...board.querySelectorAll('.item')].map(itemData);
-    localStorage.setItem(BOARD_KEY, JSON.stringify(data));
-  } catch (err) {
-    if (!saveWarned) {
-      saveWarned = true;
-      toast('The board is too full to save automatically. Try removing a big photo.', 5000);
+function boardData() {
+  return [...board.querySelectorAll('.item')].map(it => {
+    const d = { left: it.style.left, top: it.style.top, width: it.style.width, rotate: it.style.rotate || '' };
+    if (it.dataset.text) {
+      const t = it.querySelector('.text');
+      d.text = t.innerText;
+      d.font = t.style.fontFamily;
+      d.color = t.style.color;
+    } else {
+      d.src = it.querySelector('img').getAttribute('src');
+      if (it.classList.contains('flippable')) d.flippable = 1;
+      if (it.classList.contains('flipped')) d.flipped = 1;
     }
-  }
-}
-
-function restoreBoard() {
-  let data;
-  try { data = JSON.parse(localStorage.getItem(BOARD_KEY) || '[]'); } catch (err) { return; }
-  if (!Array.isArray(data)) return;
-  data.forEach(o => {
-    if (!o || typeof o !== 'object') return;
-    const it = document.createElement('div');
-    it.className = 'item' + (o.flippable ? ' flippable' : '') + (o.flipped ? ' flipped' : '');
-    it.style.left = o.left; it.style.top = o.top; it.style.width = o.width;
-    if (o.rotate) it.style.rotate = o.rotate;
-    if (typeof o.text === 'string') {
-      const t = document.createElement('div');
-      t.className = 'text';
-      t.textContent = o.text;
-      t.style.fontFamily = o.font || currentFont;
-      t.style.color = o.color || currentColor;
-      it.appendChild(t);
-      it.dataset.text = '1';
-    } else if (typeof o.img === 'string') {
-      const img = document.createElement('img');
-      img.src = o.img;
-      img.draggable = false;
-      it.appendChild(img);
-    } else return;
-    it.insertAdjacentHTML('beforeend', '<span class="handle"></span><span class="del">×</span><span class="rot"></span>');
-    board.appendChild(it);
-    if (it.dataset.text) sizeText(it);
+    return d;
   });
 }
 
-restoreBoard();
+function saveBoard() {
+  clearTimeout(saveTimer);
+  if (restoring || document.body.classList.contains('exporting')) return;
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, items: boardData() }));
+    saveWarned = false;
+  } catch (err) {
+    if (!saveWarned) { saveWarned = true; toast('Board too full to autosave. Try removing a photo.', 4000); }
+  }
+}
+const saveSoon = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveBoard, 300); };
 
-let saveTimer = null;
-const saveSoon = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveBoard, 400); };
-new MutationObserver(saveSoon).observe(board, {
-  childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['style', 'class']
-});
-window.addEventListener('pagehide', () => { clearTimeout(saveTimer); saveBoard(); });
+function restoreBoard() {
+  let data = null;
+  try { data = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (err) { return; }
+  if (!data || !Array.isArray(data.items)) return;
+  restoring = true;
+  data.items.forEach(d => {
+    try {
+      let item;
+      if (d.text != null) item = addText(d.text, d.font, d.color);
+      else if (d.src && !d.src.startsWith('blob:')) item = addImage(d.src, 20);
+      else return;
+      item.style.left = d.left; item.style.top = d.top; item.style.width = d.width;
+      if (d.rotate) item.style.rotate = d.rotate;
+      if (d.text != null) sizeText(item);
+      if (d.flippable) item.classList.add('flippable');
+      if (d.flipped) item.classList.add('flipped');
+    } catch (err) { console.warn('Could not restore an item:', err); }
+  });
+  restoring = false;
+}
+
+restoreBoard();
+new MutationObserver(saveSoon).observe(board,
+  { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['style', 'class'] });
+window.addEventListener('pagehide', saveBoard);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveBoard(); });
