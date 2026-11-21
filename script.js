@@ -25,6 +25,26 @@
 const stage = document.getElementById('stage');
 const board = document.getElementById('board');
 
+/* Fit to window: the page is designed 2800px wide. On a narrower window the whole
+   page is shrunk to fit, so nobody has to zoom out. stageScale is how much (1 = full size). */
+const DESIGN_W = 3100; // stage is 2800 wide; the logo sticks out ~10% on the right
+let stageScale = 1;
+function fitStage() {
+  stageScale = Math.min(1, document.documentElement.clientWidth / DESIGN_W);
+  if (stageScale === 1) {
+    stage.style.transform = ''; stage.style.marginBottom = ''; stage.style.marginLeft = '';
+    document.body.style.overflowX = '';
+    return;
+  }
+  stage.style.transformOrigin = '0 0';
+  stage.style.transform = 'scale(' + stageScale + ')';
+  stage.style.marginLeft = '0';
+  stage.style.marginBottom = -(stage.offsetHeight * (1 - stageScale)) + 'px';
+  document.body.style.overflowX = 'hidden';
+}
+window.addEventListener('resize', fitStage);
+fitStage();
+
 let selected = null;            // the item that is currently selected
 let currentFont = 'Caveat';     // font for new text
 let currentColor = '#3a2c20';   // color for new text
@@ -259,7 +279,7 @@ board.addEventListener('pointerdown', e => {
     resize: e.target.classList.contains('handle'),
     x: e.clientX, y: e.clientY,
     left: parseFloat(item.style.left), top: parseFloat(item.style.top),
-    wPx: item.offsetWidth,
+    wPx: item.offsetWidth * stageScale,
     rot: parseFloat(item.style.rotate) || 0,
     a0: Math.atan2(e.clientY - cy, e.clientX - cx)
   };
@@ -316,8 +336,8 @@ panel.addEventListener('pointermove', e => {
   if (!panelDrag) return;
   const maxL = stage.clientWidth - panel.offsetWidth;
   const maxT = stage.clientHeight - panel.offsetHeight;
-  panel.style.left = Math.max(0, Math.min(maxL, panelDrag.l + e.clientX - panelDrag.x)) + 'px';
-  panel.style.top = Math.max(0, Math.min(maxT, panelDrag.t + e.clientY - panelDrag.y)) + 'px';
+  panel.style.left = Math.max(0, Math.min(maxL, panelDrag.l + (e.clientX - panelDrag.x) / stageScale)) + 'px';
+  panel.style.top = Math.max(0, Math.min(maxT, panelDrag.t + (e.clientY - panelDrag.y) / stageScale)) + 'px';
 });
 panel.addEventListener('pointerup', () => { panelDrag = null; });
 
@@ -428,6 +448,8 @@ async function savePNG() {
   toast('Saving your board…');
   select(null);
   document.body.classList.add('exporting');
+  const fitKeep = { tf: stage.style.transform, mb: stage.style.marginBottom };
+  stage.style.transform = 'none'; stage.style.marginBottom = '';
   const items = [...board.querySelectorAll('.item')];
   const keep = items.map(it => ({ it, fs: it.style.fontSize, rot: it.style.rotate, tf: it.style.transform }));
   items.forEach(it => {
@@ -451,6 +473,7 @@ async function savePNG() {
     toast('Sorry, saving did not work. Check the Console for details.', 4000);
   } finally {
     document.body.classList.remove('exporting');
+    stage.style.transform = fitKeep.tf; stage.style.marginBottom = fitKeep.mb;
     keep.forEach(o => { o.it.style.fontSize = o.fs; o.it.style.rotate = o.rot; o.it.style.transform = o.tf; });
   }
 }
@@ -508,8 +531,8 @@ layersBox.addEventListener('pointermove', e => {
   if (!layersDrag) return;
   const maxL = stage.clientWidth - layersBox.offsetWidth;
   const maxT = stage.clientHeight - layersBox.offsetHeight;
-  layersBox.style.left = Math.max(0, Math.min(maxL, layersDrag.l + e.clientX - layersDrag.x)) + 'px';
-  layersBox.style.top = Math.max(0, Math.min(maxT, layersDrag.t + e.clientY - layersDrag.y)) + 'px';
+  layersBox.style.left = Math.max(0, Math.min(maxL, layersDrag.l + (e.clientX - layersDrag.x) / stageScale)) + 'px';
+  layersBox.style.top = Math.max(0, Math.min(maxT, layersDrag.t + (e.clientY - layersDrag.y) / stageScale)) + 'px';
 });
 layersBox.addEventListener('pointerup', () => { layersDrag = null; });
 
