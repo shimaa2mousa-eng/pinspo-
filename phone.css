@@ -212,3 +212,8 @@ html:not(.ready) #stage { opacity: 0; }
 /* Upload and save sit in a 72px button with no box, 64px tall */
 #upload        { width: 157.5px; left: -42.6px; top: -10.5px; }
 #saveto        { width: 200.5px; left: -65.4px; top: -18.8px; }
+
+
+/* ---------- Privacy link (bottom of the page) ---------- */
+#siteFooter { max-width: 700px; margin: 0 auto; padding: 0 16px calc(28px + env(safe-area-inset-bottom)); text-align: center; }
+#siteFooter a { color: #6b5846; font-size: 15px; text-decoration: underline; }

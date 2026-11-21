@@ -173,3 +173,13 @@ container-type: inline-size;
 #plant.hover { transform: none; }
 #shelfcalendar { transform-origin: 50% 92%; }
 #shelfcalendar.hover { animation: cal-rock 1.2s ease-in-out; }
+
+
+/* ---------- Privacy link (bottom of the page) ---------- */
+#privacyLink {
+  position: fixed; right: 14px; bottom: 10px; z-index: 5;
+  padding: 3px 12px; border-radius: 999px;
+  background: rgba(251, 247, 238, 0.85); color: #6b5846;
+  font: 15px 'Patrick Hand', sans-serif; text-decoration: none;
+}
+#privacyLink:hover { color: #3a2c20; text-decoration: underline; }
