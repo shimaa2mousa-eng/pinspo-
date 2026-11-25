@@ -10,10 +10,11 @@ A cozy, interactive mood board. Pin pictures, notes and little treasures to your
 
 - **Pick things off the shelf** and add them to the board: stickers, paper, sticky notes, push pins, polaroid frames and more.
 - **Move, resize, rotate and delete** anything on the board. Push pins can be flipped.
-- **Write notes.** The pencil jar opens a little ticket where you pick a font and a color.
+- **Write notes.** The pencil jar opens a little ticket where you pick a font and a color (or any color with the rainbow circle).
 - **Add a date.** The desk calendar asks for a date and pins it to the board.
 - **Add your own pictures** with the upload button.
-- **Edit the board** by lighting the candle: see every item in its layer, reorder them, or clear the whole board.
+- **Edit the board** by lighting the candle: see every item in its layer, reorder or duplicate them, change a note's words, font and color, or clear the whole board.
+- **Resize the boxes.** The note ticket and Edit board each have A− / A+ buttons, and remember the size you pick.
 - **Save as a picture** with the save button.
 - **Come back later.** The board is remembered automatically in your browser.
 - **Works on phones** with its own layout and touch controls.

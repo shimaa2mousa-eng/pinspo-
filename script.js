@@ -319,14 +319,71 @@ document.addEventListener('pointerup', () => {
 
 /* =====================================================================
    6. PENCIL JAR TICKET  (font, colors, text box, "Add to board")
+   The same ticket also edits a text that's already on the board: press
+   ✎ next to it in Edit board. Changes show right away; "Save changes"
+   keeps them and ✕ puts the text back the way it was.
    ===================================================================== */
 const panel = document.getElementById('panel');
-document.getElementById('panelClose').onclick = () => { play('close'); panel.style.display = 'none'; };
+const panelText = document.getElementById('panelText');
+const fontSelect = document.getElementById('fontSelect');
+const addBtn = document.getElementById('addText');
+let editing = null;   // { item, text, font, color } while a board text is being edited
+
+function showPanel() {
+  panel.style.display = 'block';
+  applyBoxSize(panel);
+  keepInside(panel);
+}
+
+function closePanel(keep) {
+  if (editing) {
+    const t = editing.item.querySelector('.text');
+    if (!keep) {                                       // ✕ = undo the changes
+      t.textContent = editing.text;
+      t.style.fontFamily = editing.font;
+      t.style.color = editing.color;
+    } else if (!t.textContent.trim()) {
+      t.textContent = editing.text;                    // never leave an empty text
+    }
+    editing = null;
+    panel.classList.remove('editing');
+    addBtn.textContent = 'Add to board';
+    panelText.value = '';
+    fontSelect.value = currentFont;                    // back to the settings for new text
+    panelText.style.fontFamily = currentFont;
+    markColor(currentColor);
+  }
+  panel.style.display = 'none';
+}
+
+function editText(item) {   // open the ticket to change a text on the board
+  if (editing && editing.item !== item) closePanel(true);
+  const t = item.querySelector('.text');
+  editing = { item, text: t.innerText, font: t.style.fontFamily, color: t.style.color };
+  select(item);
+  const font = (t.style.fontFamily || currentFont).replace(/["']/g, '');
+  fontSelect.value = font;
+  panelText.style.fontFamily = font;
+  panelText.value = editing.text;
+  markColor(t.style.color || currentColor);
+  addBtn.textContent = 'Save changes';
+  panel.classList.add('editing');
+  showPanel();
+  panelText.focus();
+}
+
+// The text that color and font changes go to: the one being edited, or the selected one
+function textTarget() {
+  if (editing) return editing.item.querySelector('.text');
+  return selected && selected.dataset.text ? selected.querySelector('.text') : null;
+}
+
+document.getElementById('panelClose').onclick = () => { play('close'); closePanel(false); };
 
 // Moving the ticket around
 let panelDrag = null;
 panel.addEventListener('pointerdown', e => {
-  if (e.target.closest('select, textarea, button, .sw')) return;   // let the controls work normally
+  if (e.target.closest('select, textarea, button, input, .sw')) return;   // let the controls work normally
   e.preventDefault();
   getSelection().removeAllRanges();
   panelDrag = { x: e.clientX, y: e.clientY, l: panel.offsetLeft, t: panel.offsetTop };
@@ -334,42 +391,81 @@ panel.addEventListener('pointerdown', e => {
 });
 panel.addEventListener('pointermove', e => {
   if (!panelDrag) return;
-  const maxL = stage.clientWidth - panel.offsetWidth;
-  const maxT = stage.clientHeight - panel.offsetHeight;
+  const maxL = stage.clientWidth - shownSize(panel).w;
+  const maxT = stage.clientHeight - shownSize(panel).h;
   panel.style.left = Math.max(0, Math.min(maxL, panelDrag.l + (e.clientX - panelDrag.x) / stageScale)) + 'px';
   panel.style.top = Math.max(0, Math.min(maxT, panelDrag.t + (e.clientY - panelDrag.y) / stageScale)) + 'px';
 });
 panel.addEventListener('pointerup', () => { panelDrag = null; });
 
-// The text box on the ticket
-const panelText = document.getElementById('panelText');
+// The text box on the ticket (while editing, typing changes the board text right away)
 panelText.style.color = currentColor;
 panelText.style.fontFamily = currentFont;
+panelText.addEventListener('input', () => {
+  if (editing) editing.item.querySelector('.text').textContent = panelText.value;
+});
 
-// The color circles on the stub (change the list to change the colors)
-['#3a2c20', '#c0392b', '#e67e22', '#d4a017', '#4f8a4b', '#2f7ea1', '#7b4fa0', '#e07aa0', '#ffffff']
-  .forEach(c => {
-    const s = document.createElement('span');
-    s.className = 'sw';
-    s.style.background = c;
-    s.onclick = () => {
-      currentColor = c;
-      document.querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === s));
-      panelText.style.color = c;
-      if (selected && selected.dataset.text) selected.querySelector('.text').style.color = c;
-    };
-    document.getElementById('swatches').appendChild(s);
+// The color circles on the stub (change the list to change the colors).
+// The last, rainbow circle opens a picker for any color.
+const SWATCHES = ['#3a2c20', '#c0392b', '#e67e22', '#d4a017', '#4f8a4b', '#2f7ea1', '#7b4fa0', '#e07aa0', '#ffffff'];
+const swatchBox = document.getElementById('swatches');
+SWATCHES.forEach(c => {
+  const s = document.createElement('span');
+  s.className = 'sw';
+  s.dataset.c = c;
+  s.style.background = c;
+  s.onclick = () => pickColor(c);
+  swatchBox.appendChild(s);
+});
+const customSw = document.createElement('label');
+customSw.className = 'sw custom';
+customSw.title = 'Any color';
+customSw.innerHTML = '<input type="color" aria-label="Pick any color">';
+const colorInput = customSw.querySelector('input');
+colorInput.addEventListener('input', () => pickColor(colorInput.value));
+swatchBox.appendChild(customSw);
+
+function colorKey(c) {   // turns "#c0392b" and "rgb(192, 57, 43)" into the same thing
+  const d = document.createElement('div');
+  d.style.color = c;
+  return d.style.color;
+}
+function toHex(c) {
+  const m = colorKey(c).match(/\d+/g);
+  return m ? '#' + m.slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('') : '#3a2c20';
+}
+function markColor(c) {   // highlights the matching circle
+  const key = colorKey(c);
+  let found = false;
+  swatchBox.querySelectorAll('.sw[data-c]').forEach(s => {
+    const on = colorKey(s.dataset.c) === key;
+    s.classList.toggle('on', on);
+    if (on) found = true;
   });
+  customSw.classList.toggle('on', !found);
+  colorInput.value = toHex(c);
+  panelText.style.color = c;
+}
+function pickColor(c) {
+  markColor(c);
+  if (!editing) currentColor = c;
+  const t = textTarget();
+  if (t) t.style.color = c;
+}
+markColor(currentColor);
 
 // The font list
-document.getElementById('fontSelect').onchange = e => {
-  currentFont = e.target.value;
-  panelText.style.fontFamily = currentFont;
-  if (selected && selected.dataset.text) selected.querySelector('.text').style.fontFamily = currentFont;
-};
+function pickFont(f) {
+  panelText.style.fontFamily = f;
+  if (!editing) currentFont = f;
+  const t = textTarget();
+  if (t) t.style.fontFamily = f;
+}
+fontSelect.onchange = e => pickFont(e.target.value);
 
-// "Add to board" button
-document.getElementById('addText').onclick = () => {
+// "Add to board" button (it says "Save changes" while editing)
+addBtn.onclick = () => {
+  if (editing) { play('close'); closePanel(true); return; }
   addText(panelText.value.trim() || 'Your text');
   panelText.value = '';
   panel.style.display = 'none';
@@ -489,9 +585,12 @@ const layersOpen = () => layersBox.style.display === 'block';
 function itemName(it) {   // what each row in the list is called
   if (it.dataset.text) return '“' + it.querySelector('.text').textContent.trim().slice(0, 16) + '”';
   const img = it.querySelector('img');
-  return img ? img.src.split('/').pop().replace(/\.\w+$/, '') : 'Item';
+  const s = img ? img.getAttribute('src') : '';
+  if (s.startsWith('data:')) return 'My picture';
+  return s ? s.split('/').pop().replace(/\.\w+$/, '') : 'Item';
 }
 
+// Each row: ✎ edit (texts only), ⧉ duplicate, ▲ move up, ▼ move down
 function renderLayers() {   // draws the list (front item first)
   const items = [...board.querySelectorAll('.item')];
   layerList.innerHTML = '';
@@ -499,10 +598,16 @@ function renderLayers() {   // draws the list (front item first)
   items.slice().reverse().forEach(it => {
     const row = document.createElement('div');
     row.className = 'lrow' + (it === selected ? ' on' : '');
-    row.innerHTML = '<b>' + (items.indexOf(it) + 1) + '</b><span>' + itemName(it) +
-      '</span><button data-a="up">▲</button><button data-a="down">▼</button>';
+    row.innerHTML = '<b>' + (items.indexOf(it) + 1) + '</b><span></span>' +
+      (it.dataset.text ? '<button type="button" data-a="edit" title="Edit text and color">✎</button>' : '') +
+      '<button type="button" data-a="dup" title="Duplicate">⧉</button>' +
+      '<button type="button" data-a="up" title="Move up">▲</button>' +
+      '<button type="button" data-a="down" title="Move down">▼</button>';
+    row.querySelector('span').textContent = itemName(it);
     row.onclick = e => {
       const a = e.target.dataset.a;
+      if (a === 'edit') { editText(it); return; }
+      if (a === 'dup') { duplicate(it); return; }
       if (a === 'up' && it.nextElementSibling) it.nextElementSibling.after(it);
       if (a === 'down' && it.previousElementSibling) it.previousElementSibling.before(it);
       select(it);
@@ -511,9 +616,21 @@ function renderLayers() {   // draws the list (front item first)
   });
 }
 
+function duplicate(it) {   // a copy lands a little down and to the right, just in front
+  const copy = it.cloneNode(true);
+  copy.classList.remove('selected');
+  const t = copy.querySelector('.text');
+  if (t) t.contentEditable = 'false';
+  copy.style.left = (parseFloat(it.style.left) + 3) + '%';
+  copy.style.top = (parseFloat(it.style.top) + 3) + '%';
+  it.after(copy);
+  play('add');
+  select(copy);
+}
+
 function toggleLayers() {
   layersBox.style.display = layersOpen() ? 'none' : 'block';
-  if (layersOpen()) renderLayers();
+  if (layersOpen()) { applyBoxSize(layersBox); keepInside(layersBox); renderLayers(); }
 }
 
 document.getElementById('layersClose').onclick = () => { play('close'); layersBox.style.display = 'none'; };
@@ -529,8 +646,8 @@ layersBox.addEventListener('pointerdown', e => {
 });
 layersBox.addEventListener('pointermove', e => {
   if (!layersDrag) return;
-  const maxL = stage.clientWidth - layersBox.offsetWidth;
-  const maxT = stage.clientHeight - layersBox.offsetHeight;
+  const maxL = stage.clientWidth - shownSize(layersBox).w;
+  const maxT = stage.clientHeight - shownSize(layersBox).h;
   layersBox.style.left = Math.max(0, Math.min(maxL, layersDrag.l + (e.clientX - layersDrag.x) / stageScale)) + 'px';
   layersBox.style.top = Math.max(0, Math.min(maxT, layersDrag.t + (e.clientY - layersDrag.y) / stageScale)) + 'px';
 });
@@ -545,7 +662,51 @@ document.getElementById('clearBoard').onclick = () => {
 };
 
 // Keep the list up to date when items are added or removed
-new MutationObserver(() => { if (layersOpen()) renderLayers(); }).observe(board, { childList: true });
+new MutationObserver(() => {
+  if (editing && !editing.item.isConnected) closePanel(true);   // the text being edited was deleted
+  if (layersOpen()) renderLayers();
+}).observe(board, { childList: true });
+
+
+/* =====================================================================
+   9b. BOX SIZE  (A− / A+ in the text ticket and in Edit board)
+   Each box remembers its own size (70% to 160%). The page is shrunk to
+   fit the window, so the boxes are scaled back up by 1 / stageScale to
+   stay the same, readable size on screen.
+   ===================================================================== */
+const BOX_MIN = 0.7, BOX_MAX = 1.6, BOX_STEP = 0.1;
+
+function boxSize(box) {
+  let v = 1;
+  try { v = parseFloat(localStorage.getItem('pinspoSize-' + box.id)) || 1; } catch (err) {}
+  return Math.min(BOX_MAX, Math.max(BOX_MIN, v));
+}
+function applyBoxSize(box) {
+  const size = boxSize(box);
+  box.style.setProperty('--size', size);
+  box.style.setProperty('--ui', size / stageScale);
+}
+function shownSize(box) {   // how much room the box takes up on the page
+  const ui = parseFloat(box.style.getPropertyValue('--ui')) || 1;
+  return { w: box.offsetWidth * ui, h: box.offsetHeight * ui };
+}
+function keepInside(box) {  // moves the box back onto the page if it sticks out
+  const { w, h } = shownSize(box);
+  box.style.left = Math.max(0, Math.min(stage.clientWidth - w, box.offsetLeft)) + 'px';
+  box.style.top = Math.max(0, Math.min(stage.clientHeight - h, box.offsetTop)) + 'px';
+}
+
+document.querySelectorAll('.sizer button').forEach(b => b.addEventListener('click', () => {
+  const box = b.closest('#panel, #layersBox');
+  const size = Math.round((boxSize(box) + BOX_STEP * b.dataset.size) * 10) / 10;
+  try { localStorage.setItem('pinspoSize-' + box.id, Math.min(BOX_MAX, Math.max(BOX_MIN, size))); } catch (err) {}
+  applyBoxSize(box);
+  keepInside(box);
+}));
+
+window.addEventListener('resize', () => { applyBoxSize(panel); applyBoxSize(layersBox); });
+applyBoxSize(panel);
+applyBoxSize(layersBox);
 
 
 /* =====================================================================
@@ -678,7 +839,7 @@ if (calEl) {
 const src = id => document.getElementById(id).getAttribute('src');
 
 const actions = {
-  penciljar:     () => { panel.style.display = panel.style.display === 'block' ? 'none' : 'block'; },
+  penciljar:     () => { if (panel.style.display === 'block') closePanel(true); else showPanel(); },
   books:         () => addImage('images/paper.png', 29),
   stickynote:    crumpleNote,
   pin:           () => addImage(src('pin'), 20).classList.add('flippable'),

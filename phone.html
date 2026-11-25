@@ -45,7 +45,9 @@
 
     <!-- Edit board (opened by the candle) -->
     <div id="layersBox">
-      <div class="lhead"><b>Edit Board</b><button id="layersClose" type="button">×</button></div>
+      <div class="lhead"><b>Edit Board</b>
+        <span class="sizer"><button type="button" data-size="-1" aria-label="Smaller">A−</button><button type="button" data-size="1" aria-label="Bigger">A+</button></span>
+        <button id="layersClose" type="button" aria-label="Close">×</button></div>
       <p class="lsub">Board Layers</p>
       <div id="layerList"></div>
       <button id="clearBoard" type="button">Clear entire board</button>
@@ -54,6 +56,8 @@
     <!-- Text panel (opened by the pencil jar) -->
     <div id="panel">
       <div class="ticket">
+        <div class="lhead"><b id="panelTitle">Add text</b>
+          <span class="sizer"><button type="button" data-size="-1" aria-label="Smaller">A−</button><button type="button" data-size="1" aria-label="Bigger">A+</button></span></div>
         <div class="tmain">
           <label>Font</label>
           <select id="fontSelect">

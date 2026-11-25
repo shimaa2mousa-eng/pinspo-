@@ -31,7 +31,9 @@
   <div id="intro"><img src="images/logo.png" alt="Pinspo"></div>
   <div id="stage">
     <div id="layersBox">
-  <div class="lhead"><b>Edit Board</b><button id="layersClose">×</button></div>
+  <div class="lhead"><b>Edit Board</b>
+    <span class="sizer"><button type="button" data-size="-1" title="Make this box smaller">A−</button><button type="button" data-size="1" title="Make this box bigger">A+</button></span>
+    <button id="layersClose" type="button" title="Close">×</button></div>
   <p class="lsub">Board Layers</p>
   <div id="layerList"></div>
   <button id="clearBoard">Clear entire board</button>
@@ -67,12 +69,13 @@
         <option style="font-family:'Permanent Marker'">Permanent Marker</option>
       </select>
       <textarea id="panelText" placeholder="Type your text..."></textarea>
-      <button id="addText">Add to board</button>
+      <button id="addText" type="button">Add to board</button>
     </div>
     <div class="tstub">
       <label>Color</label>
       <div id="swatches"></div>
-      <button id="panelClose" type="button">✕</button>
+      <span class="sizer"><button type="button" data-size="-1" title="Make this box smaller">A−</button><button type="button" data-size="1" title="Make this box bigger">A+</button></span>
+      <button id="panelClose" type="button" title="Close">✕</button>
     </div>
   </div>
 </div>

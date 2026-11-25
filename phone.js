@@ -250,44 +250,146 @@ document.addEventListener('pointercancel', endDrag);
 
 /* =====================================================================
    6. PENCIL JAR TEXT PANEL  (opens at the bottom of the screen)
+   The same panel also edits a text that's already on the board: press
+   ✎ next to it in Edit board. Changes show right away; "Save changes"
+   keeps them and ✕ puts the text back the way it was.
    ===================================================================== */
 const panel = document.getElementById('panel');
-document.getElementById('panelClose').onclick = () => { play('close'); panel.style.display = 'none'; };
-
 const panelText = document.getElementById('panelText');
-panelText.style.color = currentColor;
-panelText.style.fontFamily = currentFont;
+const panelTitle = document.getElementById('panelTitle');
+const fontSelect = document.getElementById('fontSelect');
+const addBtn = document.getElementById('addText');
+let editing = null;   // { item, text, font, color, fromLayers } while a board text is being edited
 
-['#3a2c20', '#c0392b', '#e67e22', '#d4a017', '#4f8a4b', '#2f7ea1', '#7b4fa0', '#e07aa0', '#ffffff']
-  .forEach(c => {
-    const s = document.createElement('span');
-    s.className = 'sw' + (c === currentColor ? ' on' : '');
-    s.style.background = c;
-    s.onclick = () => {
-      currentColor = c;
-      document.querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === s));
-      panelText.style.color = c;
-      if (selected && selected.dataset.text) selected.querySelector('.text').style.color = c;
-    };
-    document.getElementById('swatches').appendChild(s);
-  });
+function showPanel() {
+  layersBox.style.display = 'none';
+  applyBoxSize(panel);
+  panel.style.display = 'block';
+}
 
-document.getElementById('fontSelect').onchange = e => {
-  currentFont = e.target.value;
-  panelText.style.fontFamily = currentFont;
-  if (selected && selected.dataset.text) selected.querySelector('.text').style.fontFamily = currentFont;
-};
-
-document.getElementById('addText').onclick = () => {
-  addText(panelText.value.trim() || 'Your text');
-  panelText.value = '';
+function closePanel(keep) {
+  let backToLayers = false;
+  if (editing) {
+    const t = editing.item.querySelector('.text');
+    if (!keep) {                                       // ✕ = undo the changes
+      t.textContent = editing.text;
+      t.style.fontFamily = editing.font;
+      t.style.color = editing.color;
+    } else if (!t.textContent.trim()) {
+      t.textContent = editing.text;                    // never leave an empty text
+    }
+    backToLayers = editing.fromLayers && editing.item.isConnected;
+    editing = null;
+    panelTitle.textContent = 'Add text';
+    addBtn.textContent = 'Add to board';
+    panelText.value = '';
+    fontSelect.value = currentFont;                    // back to the settings for new text
+    panelText.style.fontFamily = currentFont;
+    markColor(currentColor);
+  }
   panelText.blur();
   panel.style.display = 'none';
+  if (backToLayers) toggleLayers();                    // go back to Edit board
+}
+
+function editText(item) {   // open the panel to change a text on the board
+  if (editing && editing.item !== item) closePanel(true);
+  const t = item.querySelector('.text');
+  editing = { item, text: t.innerText, font: t.style.fontFamily, color: t.style.color, fromLayers: layersOpen() };
+  select(item);
+  const font = (t.style.fontFamily || currentFont).replace(/["']/g, '');
+  fontSelect.value = font;
+  panelText.style.fontFamily = font;
+  panelText.value = editing.text;
+  markColor(t.style.color || currentColor);
+  panelTitle.textContent = 'Edit text';
+  addBtn.textContent = 'Save changes';
+  showPanel();
+}
+
+// The text that color and font changes go to: the one being edited, or the selected one
+function textTarget() {
+  if (editing) return editing.item.querySelector('.text');
+  return selected && selected.dataset.text ? selected.querySelector('.text') : null;
+}
+
+document.getElementById('panelClose').onclick = () => { play('close'); closePanel(false); };
+
+// The text box (while editing, typing changes the board text right away)
+panelText.style.color = currentColor;
+panelText.style.fontFamily = currentFont;
+panelText.addEventListener('input', () => {
+  if (editing) editing.item.querySelector('.text').textContent = panelText.value;
+});
+
+// The color circles (change the list to change the colors).
+// The last, rainbow circle opens a picker for any color.
+const SWATCHES = ['#3a2c20', '#c0392b', '#e67e22', '#d4a017', '#4f8a4b', '#2f7ea1', '#7b4fa0', '#e07aa0', '#ffffff'];
+const swatchBox = document.getElementById('swatches');
+SWATCHES.forEach(c => {
+  const s = document.createElement('span');
+  s.className = 'sw';
+  s.dataset.c = c;
+  s.style.background = c;
+  s.onclick = () => pickColor(c);
+  swatchBox.appendChild(s);
+});
+const customSw = document.createElement('label');
+customSw.className = 'sw custom';
+customSw.innerHTML = '<input type="color" aria-label="Pick any color">';
+const colorInput = customSw.querySelector('input');
+colorInput.addEventListener('input', () => pickColor(colorInput.value));
+swatchBox.appendChild(customSw);
+
+function colorKey(c) {   // turns "#c0392b" and "rgb(192, 57, 43)" into the same thing
+  const d = document.createElement('div');
+  d.style.color = c;
+  return d.style.color;
+}
+function toHex(c) {
+  const m = colorKey(c).match(/\d+/g);
+  return m ? '#' + m.slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('') : '#3a2c20';
+}
+function markColor(c) {   // highlights the matching circle
+  const key = colorKey(c);
+  let found = false;
+  swatchBox.querySelectorAll('.sw[data-c]').forEach(s => {
+    const on = colorKey(s.dataset.c) === key;
+    s.classList.toggle('on', on);
+    if (on) found = true;
+  });
+  customSw.classList.toggle('on', !found);
+  colorInput.value = toHex(c);
+  panelText.style.color = c;
+}
+function pickColor(c) {
+  markColor(c);
+  if (!editing) currentColor = c;
+  const t = textTarget();
+  if (t) t.style.color = c;
+}
+markColor(currentColor);
+
+// The font list
+fontSelect.onchange = e => {
+  const f = e.target.value;
+  panelText.style.fontFamily = f;
+  if (!editing) currentFont = f;
+  const t = textTarget();
+  if (t) t.style.fontFamily = f;
+};
+
+// "Add to board" button (it says "Save changes" while editing)
+addBtn.onclick = () => {
+  if (editing) { play('close'); closePanel(true); return; }
+  addText(panelText.value.trim() || 'Your text');
+  panelText.value = '';
+  closePanel(true);
 };
 
 function togglePanel() {
-  layersBox.style.display = 'none';
-  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  if (panel.style.display === 'block') closePanel(true);
+  else showPanel();
 }
 
 
@@ -404,6 +506,7 @@ function itemName(it) {
   return s ? s.split('/').pop().replace(/\.\w+$/, '') : 'Item';
 }
 
+// Each row: ✎ edit (texts only), ⧉ duplicate, ▲ move up, ▼ move down
 function renderLayers() {
   const items = [...board.querySelectorAll('.item')];
   layerList.innerHTML = '';
@@ -411,10 +514,16 @@ function renderLayers() {
   items.slice().reverse().forEach(it => {
     const row = document.createElement('div');
     row.className = 'lrow' + (it === selected ? ' on' : '');
-    row.innerHTML = '<b>' + (items.indexOf(it) + 1) + '</b><span>' + itemName(it) +
-      '</span><button type="button" data-a="up">▲</button><button type="button" data-a="down">▼</button>';
+    row.innerHTML = '<b>' + (items.indexOf(it) + 1) + '</b><span></span>' +
+      (it.dataset.text ? '<button type="button" data-a="edit" aria-label="Edit text and color">✎</button>' : '') +
+      '<button type="button" data-a="dup" aria-label="Duplicate">⧉</button>' +
+      '<button type="button" data-a="up" aria-label="Move up">▲</button>' +
+      '<button type="button" data-a="down" aria-label="Move down">▼</button>';
+    row.querySelector('span').textContent = itemName(it);
     row.onclick = e => {
       const a = e.target.dataset.a;
+      if (a === 'edit') { editText(it); return; }
+      if (a === 'dup') { duplicate(it); return; }
       if (a === 'up' && it.nextElementSibling) it.nextElementSibling.after(it);
       if (a === 'down' && it.previousElementSibling) it.previousElementSibling.before(it);
       select(it);
@@ -423,10 +532,22 @@ function renderLayers() {
   });
 }
 
+function duplicate(it) {   // a copy lands a little down and to the right, just in front
+  const copy = it.cloneNode(true);
+  copy.classList.remove('selected');
+  const t = copy.querySelector('.text');
+  if (t) t.contentEditable = 'false';
+  copy.style.left = (parseFloat(it.style.left) + 3) + '%';
+  copy.style.top = (parseFloat(it.style.top) + 3) + '%';
+  it.after(copy);
+  play('add');
+  select(copy);
+}
+
 function toggleLayers() {
-  panel.style.display = 'none';
+  if (panel.style.display === 'block') closePanel(true);
   layersBox.style.display = layersOpen() ? 'none' : 'block';
-  if (layersOpen()) renderLayers();
+  if (layersOpen()) { applyBoxSize(layersBox); renderLayers(); }
 }
 
 document.getElementById('layersClose').onclick = () => { play('close'); layersBox.style.display = 'none'; };
@@ -438,7 +559,29 @@ document.getElementById('clearBoard').onclick = () => {
   selected = null;
 };
 
-new MutationObserver(() => { if (layersOpen()) renderLayers(); }).observe(board, { childList: true });
+new MutationObserver(() => {
+  if (editing && !editing.item.isConnected) closePanel(true);   // the text being edited was deleted
+  if (layersOpen()) renderLayers();
+}).observe(board, { childList: true });
+
+
+/* ---- Box size (A− / A+ in the text panel and in Edit board) ----
+   Each sheet remembers its own size, from 80% to 140%. */
+const BOX_MIN = 0.8, BOX_MAX = 1.4, BOX_STEP = 0.1;
+
+function boxSize(box) {
+  let v = 1;
+  try { v = parseFloat(localStorage.getItem('pinspoSize-' + box.id)) || 1; } catch (err) {}
+  return Math.min(BOX_MAX, Math.max(BOX_MIN, v));
+}
+function applyBoxSize(box) { box.style.setProperty('--size', boxSize(box)); }
+
+document.querySelectorAll('.sizer button').forEach(b => b.addEventListener('click', () => {
+  const box = b.closest('#panel, #layersBox');
+  const size = Math.round((boxSize(box) + BOX_STEP * b.dataset.size) * 10) / 10;
+  try { localStorage.setItem('pinspoSize-' + box.id, Math.min(BOX_MAX, Math.max(BOX_MIN, size))); } catch (err) {}
+  applyBoxSize(box);
+}));
 
 
 /* =====================================================================

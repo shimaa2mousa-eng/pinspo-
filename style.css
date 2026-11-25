@@ -65,12 +65,13 @@ container-type: inline-size;
 #panel { display: none; position: absolute; left: 32%; top: 30%; width: 480px; z-index: 50;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.3)); }
 .ticket { display: flex; background: #f6efe0; border-radius: 10px; font-size: 14px; color: #4a3a2c;
-  -webkit-mask: radial-gradient(circle 9px at calc(100% - 96px) 0, #0000 97%, #000) top / 100% 51% no-repeat,
-                radial-gradient(circle 9px at calc(100% - 96px) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
-  mask: radial-gradient(circle 9px at calc(100% - 96px) 0, #0000 97%, #000) top / 100% 51% no-repeat,
-        radial-gradient(circle 9px at calc(100% - 96px) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat; }
+  -webkit-mask: radial-gradient(circle 11px at calc(100% - 124px) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+                radial-gradient(circle 11px at calc(100% - 124px) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+  mask: radial-gradient(circle 11px at calc(100% - 124px) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+        radial-gradient(circle 11px at calc(100% - 124px) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat; }
 .tmain { flex: 1; padding: 12px; }
-.tstub { width: 96px; padding: 12px 8px; box-sizing: border-box; border-left: 2px dashed #c9b79b; text-align: center; }
+.tstub { width: 124px; padding: 14px 10px; box-sizing: border-box; border-left: 2px dashed #c9b79b; text-align: center;
+  display: flex; flex-direction: column; }
 .ticket label { display: block; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
 .ticket select, .ticket button, .ticket textarea { width: 100%; box-sizing: border-box; font: inherit; margin: 4px 0; }
 #panelText { height: 72px; resize: none; font-family: Caveat; font-size: 22px; color: #3a2c20;
@@ -137,12 +138,41 @@ container-type: inline-size;
 #clearBoard { width: 100%; margin-top: 8px; padding: 9px; font: inherit; border: 1px solid #b5533c;
   color: #b5533c; background: #fff; border-radius: 8px; cursor: pointer; }
 .empty { font-size: 13px; opacity: 0.7; }
-#panelClose { margin-top: 71px; padding: 4px 0; font-size: 12px; background: #fff;
+#panelClose { margin-top: auto; padding: 6px 0; font-size: 15px; background: #fff;
   border: 1px solid #c9b79b; border-radius: 17px; cursor: pointer; color: #4a3a2c; }
-  #panel { width: 750px; }
-.ticket { font-size: 15px; }
-#panelText { height: 100px; font-size: 24px; }
-#layersBox { width: 500px; max-height: 200%; font-size: 17px; }
+
+/* ---------- Text ticket and Edit board: sizes ----------
+   These are how big the two boxes look on screen at 100%. The page itself is
+   shrunk to fit the window, so script.js scales these boxes back up (--ui)
+   so they stay readable. The A− / A+ buttons in each box make it smaller or
+   bigger (--size), and the choice is remembered. */
+#panel, #layersBox { transform: scale(var(--ui, 1)); transform-origin: 0 0; }
+#panel { width: 660px; }
+.ticket { font-size: 18px; }
+.ticket label { font-size: 12px; margin-top: 4px; }
+.tmain { padding: 16px; }
+.ticket select { padding: 6px 8px; }
+#panelText { height: 150px; font-size: 32px; padding: 8px 10px; }
+#addText { padding: 8px; font-size: 18px; }
+#swatches .sw { width: 26px; height: 26px; margin: 3px; }
+.sw.custom { position: relative; overflow: hidden; box-sizing: border-box;
+  background: conic-gradient(#e74c3c, #f1c40f, #2ecc71, #3498db, #9b59b6, #e74c3c); }
+.sw.custom input { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px);
+  opacity: 0; border: 0; padding: 0; margin: 0; cursor: pointer; }
+#layersBox { width: 480px; max-height: calc(75vh / var(--size, 1)); padding: 18px; font-size: 19px; }
+.lhead b { font-size: 23px; }
+.lhead #layersClose { font-size: 26px; padding: 0 4px; }
+.lsub { font-size: 12px; margin-bottom: 8px; }
+.lrow { padding: 8px 10px; }
+.lrow button { font-size: 15px; padding: 3px 8px; }
+.lrow button[data-a="edit"] { background: #f6efe0; }
+.empty { font-size: 16px; }
+.sizer { display: flex; gap: 4px; justify-content: center; }
+.lhead .sizer { margin-left: auto; margin-right: 10px; }
+.tstub .sizer { margin: 12px 0 10px; }
+.ticket .sizer button, .lhead .sizer button { width: auto; margin: 0; padding: 2px 8px; font: 14px/1.4 'Patrick Hand', sans-serif;
+  background: #fff; border: 1px solid #c9b79b; border-radius: 6px; color: #4a3a2c; cursor: pointer; }
+.ticket .sizer button:hover, .lhead .sizer button:hover { background: #efe6d3; }
 #flower {
   transform-origin: 50% 100%;
   transition: transform 0.15s, scale 0.9s cubic-bezier(0.34, 1.56, 0.64, 1), rotate 0.9s ease, filter 0.9s ease;

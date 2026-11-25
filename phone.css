@@ -119,45 +119,63 @@ body {
 .text[contenteditable="true"] { cursor: text; outline: none; -webkit-user-select: text; user-select: text; }
 
 /* ---------- Text panel (pencil jar) and Edit board (candle) ----------
-   On phones both open as a sheet at the bottom of the screen. */
+   On phones both open as a sheet at the bottom of the screen.
+   Every size inside is in "em", so the whole sheet grows or shrinks with
+   the A− / A+ buttons (phone.js sets --size, 0.8 to 1.4, remembered).
+   To change the normal size, change 18px below. */
 #panel, #layersBox {
   display: none; position: fixed; z-index: 50;
   left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom));
-  max-width: 560px; margin: 0 auto;
+  max-width: 600px; max-height: calc(88vh - env(safe-area-inset-bottom)); margin: 0 auto;
+  overflow: auto; overscroll-behavior: contain;
   box-sizing: border-box;
   box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.18), 0 -4px 20px rgba(0, 0, 0, 0.25);
   border-radius: 16px;
+  font-size: calc(18px * var(--size, 1));
+  color: #4a3a2c;
 }
-.ticket { background: #f6efe0; border-radius: 16px; padding: 14px; font-size: 15px; color: #4a3a2c; }
-.ticket label { display: block; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; margin: 8px 0 4px; }
-.ticket select, .ticket textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; }
-.ticket select { padding: 8px; border: 1px dashed #c9b79b; border-radius: 8px; background: #fffdf6; color: inherit; }
-#panelText { height: 84px; resize: none; font-family: Caveat; font-size: 24px; color: #3a2c20;
-  background: #fffdf6; border: 1px dashed #c9b79b; border-radius: 8px; padding: 8px;
+.lhead { display: flex; justify-content: space-between; align-items: center; gap: 0.5em; }
+.lhead b { font-size: 1.15em; }
+.sizer { display: flex; gap: 0.3em; }
+.lhead .sizer { margin-left: auto; }
+.sizer button { padding: 0.2em 0.6em; font: 0.85em/1.3 'Patrick Hand', sans-serif; color: inherit;
+  background: #fff; border: 1px solid #c9b79b; border-radius: 0.45em; cursor: pointer; }
+
+.ticket { background: #f6efe0; border-radius: 16px; padding: 0.85em; }
+.ticket label { display: block; font-size: 0.62em; letter-spacing: 0.14em; text-transform: uppercase; margin: 0.9em 0 0.4em; }
+.ticket select, .ticket textarea { width: 100%; box-sizing: border-box; font: inherit; }
+.ticket select { font-size: max(16px, 1em); padding: 0.4em; border: 1px dashed #c9b79b; border-radius: 0.45em;
+  background: #fffdf6; color: inherit; }
+#panelText { height: 3.4em; resize: none; font-family: Caveat; font-size: 1.7em; color: #3a2c20;
+  background: #fffdf6; border: 1px dashed #c9b79b; border-radius: 0.3em; padding: 0.25em 0.35em;
   -webkit-user-select: text; user-select: text; }
-#swatches { display: flex; flex-wrap: wrap; gap: 8px; }
-.sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #aaa;
+#swatches { display: flex; flex-wrap: wrap; gap: 0.5em; }
+.sw { width: 1.8em; height: 1.8em; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #aaa;
   box-sizing: border-box; cursor: pointer; }
 .sw.on { box-shadow: 0 0 0 2px #4a3a2c; }
-.tbtns { display: flex; gap: 8px; margin-top: 14px; }
-#addText { flex: 1; padding: 10px; border: 0; border-radius: 999px; background: #c79a6b; color: #fff;
-  font: 600 22px Caveat, sans-serif; cursor: pointer; }
-#panelClose { width: 64px; border: 0; border-radius: 999px; background: #e8dccb; color: #3a2c20;
-  font-size: 16px; cursor: pointer; }
+.sw.custom { position: relative; overflow: hidden;
+  background: conic-gradient(#e74c3c, #f1c40f, #2ecc71, #3498db, #9b59b6, #e74c3c); }
+.sw.custom input { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px);
+  opacity: 0; border: 0; padding: 0; margin: 0; cursor: pointer; }
+.tbtns { display: flex; gap: 0.5em; margin-top: 0.9em; }
+#addText { flex: 1; padding: 0.4em; border: 0; border-radius: 999px; background: #c79a6b; color: #fff;
+  font: 600 1.35em Caveat, sans-serif; cursor: pointer; }
+#panelClose { width: 3.6em; border: 0; border-radius: 999px; background: #e8dccb; color: #3a2c20;
+  font-size: 0.9em; cursor: pointer; }
 
-#layersBox { max-height: 60vh; overflow: auto; padding: 14px; background: #fbf7ee; font-size: 17px; color: #4a3a2c; }
-.lhead { display: flex; justify-content: space-between; align-items: center; }
-.lhead button { border: 0; background: none; font-size: 26px; padding: 0 6px; cursor: pointer; color: inherit; }
-.lsub { margin: 2px 0 6px; font-size: 11px; letter-spacing: 0.12em; text-transform: lowercase; }
-.lrow { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; cursor: pointer; }
+#layersBox { padding: 0.85em; background: #fbf7ee; }
+#layersClose { border: 0; background: none; font-size: 1.5em; line-height: 1; padding: 0 0.2em; cursor: pointer; color: inherit; }
+.lsub { margin: 0.1em 0 0.4em; font-size: 0.62em; letter-spacing: 0.12em; text-transform: lowercase; }
+.lrow { display: flex; align-items: center; gap: 0.4em; padding: 0.45em; border-radius: 0.45em; cursor: pointer; }
 .lrow.on { background: #e6d6b8; }
-.lrow b { width: 20px; text-align: center; }
-.lrow span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.lrow button { width: 36px; height: 32px; border: 1px solid #c9b79b; background: #fff; border-radius: 8px;
-  cursor: pointer; font-size: 13px; color: inherit; }
-#clearBoard { width: 100%; margin-top: 10px; padding: 11px; font: inherit; border: 1px solid #b5533c;
-  color: #b5533c; background: #fff; border-radius: 10px; cursor: pointer; }
-.empty { font-size: 14px; opacity: 0.7; }
+.lrow b { width: 1.2em; text-align: center; }
+.lrow span { flex: 1; min-width: 2em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.lrow button { flex: none; width: 2.7em; height: 2.4em; border: 1px solid #c9b79b; background: #fff; border-radius: 0.6em;
+  cursor: pointer; font-size: 0.75em; color: inherit; }
+.lrow button[data-a="edit"] { background: #f6efe0; }
+#clearBoard { width: 100%; margin-top: 0.6em; padding: 0.6em; font: inherit; border: 1px solid #b5533c;
+  color: #b5533c; background: #fff; border-radius: 0.55em; cursor: pointer; }
+.empty { font-size: 0.8em; opacity: 0.7; }
 
 /* ---------- Intro screen ---------- */
 #intro {
